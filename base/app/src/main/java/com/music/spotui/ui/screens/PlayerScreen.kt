@@ -377,6 +377,32 @@ fun PlayerScreen(navController: NavController) {
         val lyricsPeek = if (!com.music.spotui.data.preferences.PlayerLyricsCardPref.shown) 0
             else if (shortWindow) SHORT_PLAYER_PEEK_DP else PLAYER_PEEK_DP
         val pillAboveTitle = canvasUrl != null && !videoOn
+        if (!videoOn && songCoverUri.isNotBlank()) {
+            GlideImage(
+                model = songCoverUri,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(if (immersive) Modifier.fillMaxSize() else Modifier.fillMaxHeight(0.72f))
+                    .align(Alignment.TopCenter)
+                    .graphicsLayer { alpha = 1f - canvasProgress.value }
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = 1f - canvasProgress.value }
+                    .background(
+                        Brush.verticalGradient(
+                            0.0f to Color.Black.copy(alpha = 0.25f),
+                            0.35f to Color.Transparent,
+                            0.60f to PLAYER_BASE.copy(alpha = 0.75f),
+                            0.74f to PLAYER_BASE,
+                            1.0f to PLAYER_BASE,
+                        )
+                    )
+            )
+        }
         if (canvasUrl != null && !videoOn) {
             CanvasVideo(
                 url = canvasUrl,
@@ -533,36 +559,8 @@ fun PlayerScreen(navController: NavController) {
                 // artwork could be dragged onto a page falling back to the very same cover.
                 // (Read again each time np changes, which a station starting does.)
                 userScrollEnabled = com.music.spotui.radio.RadioPlayer.current() == null,
-            ) { page ->
-                val cover = when (page) {
-                    0 -> np.prev?.coverUri
-                    2 -> np.next?.coverUri
-                    else -> null
-                } ?: songCoverUri
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    GlideImage(
-                        modifier = (if (immersive) Modifier.fillMaxSize()
-                            // Normal layout keeps the inset, rounded cover.
-                            else Modifier.padding(horizontal = coverInset).aspectRatio(1f).clip(RoundedCornerShape(8.dp)))
-                            .graphicsLayer {
-                                val shown = 1f - canvasProgress.value
-                                alpha = shown
-                                val beat = if (page == 1) 1f + 0.025f * (mixPulse?.level() ?: 0f) else 1f
-                                val grow = (1f + (1f - shown) * 0.06f) * beat
-                                scaleX = grow; scaleY = grow
-                            },
-                        model = cover,
-                        contentScale = ContentScale.Crop,
-                        contentDescription = "")
-                    // The song a crossfade fades out, dissolving into this one.
-                    if (page == 1) com.music.spotui.ui.components.SongBlendCover(
-                        blend,
-                        (if (immersive) Modifier.fillMaxSize()
-                            else Modifier.padding(horizontal = coverInset).aspectRatio(1f).clip(RoundedCornerShape(8.dp)))
-                            .graphicsLayer { alpha = 1f - canvasProgress.value }
-                            .mixBeat(mixPulse),
-                    )
-                }
+            ) { _ ->
+                Box(modifier = Modifier.fillMaxSize())
             }
             }
             // Over the artwork / video; with a Canvas the artwork is hidden, so the
